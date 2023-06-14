@@ -1,40 +1,65 @@
 defmodule MdDocument do
   def parse(text) do
     lines = String.split(text, "\n")
-    parse_blocks(lines, [])
+    BlockTokenizer.parse_block(lines)
+    # parse_blocks(lines, [])
   end
 
-  def parse_blocks([], acc) do
-    Enum.reverse(acc)
+  # def parse_blocks([], acc) do
+  #   Enum.reverse(acc)
+  # end
+
+
+  # def parse_blocks(["```" | rest], acc) do
+  #   code_lines = extract_code_block(rest, [])
+  #   parse_blocks(code_lines, acc ++ [:code_block | code_lines])
+  # end
+
+  # def parse_blocks([line | rest], acc) do
+  #   cond do
+  #     String.match?(line, ~r/^\#{1,6}\s+/) -> parse_header(line, rest, acc)
+  #     String.match?(line, ~r/^- /) -> parse_list_item(line, rest, acc)
+  #     true -> parse_blocks(rest, acc ++ [parse_line(line)])
+  #   end
+  # end
+
+
+  # defp parse_header(line, rest, acc) do
+  #   level = String.length(String.trim_trailing(line, "#"))
+  #   parse_blocks(rest, acc ++ [{:header, level, String.trim_leading(line, "#")}])
+  # end
+
+  # defp parse_list_item(line, rest, acc) do
+  #   parse_blocks(rest, acc ++ [:list_item, String.trim_leading(line, "- ")])
+  # end
+
+  def parse_line(line) do
+    tokens = apply_tokenization_rules(line, tokenization_rules())
+    {:paragraph, tokens}
   end
 
-
-  def parse_blocks(["```" | rest], acc) do
-    code_lines = extract_code_block(rest, [])
-    parse_blocks(code_lines, acc ++ [:code_block | code_lines])
+  defp apply_tokenization_rules(line, []) do
+    [line]
   end
 
-  def parse_blocks([line | rest], acc) do
-    cond do
-      String.match?(line, ~r/^\#{1,6}\s+/) -> parse_header(line, rest, acc)
-      String.match?(line, ~r/^- /) -> parse_list_item(line, rest, acc)
-      true -> parse_blocks(rest, acc ++ [parse_line(line)])
+  defp apply_tokenization_rules(line, [regex | rest]) do
+    case Regex.run(regex.rule, line) do
+      [_token | [_, val, _]] ->
+        [Atom.to_string(regex.attr) | apply_tokenization_rules(val, rest)]
+      _ ->
+        apply_tokenization_rules(line, rest)
     end
   end
 
-
-  defp parse_header(line, rest, acc) do
-    level = String.length(String.trim_trailing(line, "#"))
-    parse_blocks(rest, acc ++ [{:header, level, String.trim_leading(line, "#")}])
-  end
-
-  defp parse_list_item(line, rest, acc) do
-    parse_blocks(rest, acc ++ [:list_item, String.trim_leading(line, "- ")])
-  end
-  def parse_line(line) do
-    # Perform tokenization within paragraphs or other elements
-    tokens = line |> String.split(~r/\s+/, trim: true)
-    {:paragraph, tokens}
+  defp tokenization_rules do
+    [
+      %{rule: ~r/(\*{2})(.*?)(\1)/, attr: :bold},       # Bold
+      %{rule: ~r/(_{2})(.*?)(\1)/, attr: :Bold},        # Bold
+      %{rule: ~r/(_{1})(.*?)(\1)/, attr: :Bold},        # Italic
+      %{rule: ~r/(\*{1})(.*?)(\1)/, attr: :italic},     # Italic
+      %{rule: ~r/(~~)(.*?)(\1)/, attr: :strikethrough}, # Strikethrough
+      # Add more regex patterns for additional tokenization rules
+    ]
   end
 
 
@@ -59,6 +84,7 @@ defmodule MdDocument do
 
   defp convert_block_to_html(block) do
     case block do
+      {:header, _level, content} -> content |> dbg()
       {:paragraph, tokens} ->
         tokens
         |> Enum.map(&convert_token_to_html/1)

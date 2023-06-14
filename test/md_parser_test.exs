@@ -10,16 +10,33 @@ defmodule MdParserTest do
 ###### h6 Heading
 
 """
+
+@typographic """
+## Emphasis
+
+**This is bold text**
+
+__This is bold text__
+
+*This is italic text*
+
+_This is italic text_
+
+~~Strikethrough~~
+
+this is the normal text section
+
+"""
   test "test tokenizer" do
     {:ok, doc} = File.read("./assets/data/sample.md")
     # Tokenizer.parse(doc)
     parsed = MdDocument.parse(doc)
-    # parsed |> dbg()
+     parsed |> dbg()
     assert true
   end
 
   test "test headers" do
-    parsed_blocks = MdDocument.parse(@headers)
+    parsed_blocks = MdDocument.parse(@typographic)
     html = MdDocument.to_html(parsed_blocks)
     parsed_blocks |> dbg()
     assert true
