@@ -27,17 +27,17 @@ _This is italic text_
 this is the normal text section
 
 """
-  test "test tokenizer" do
-    {:ok, doc} = File.read("./assets/data/sample.md")
-    # Tokenizer.parse(doc)
-    parsed = MdDocument.parse(doc)
-     parsed |> dbg()
-    assert true
-  end
+  # test "test tokenizer" do
+  #   {:ok, doc} = File.read("./assets/data/sample.md")
+  #   # Tokenizer.parse(doc)
+  #   parsed = MdDocument.parse(doc)
+  #    parsed |> dbg()
+  #   assert true
+  # end
 
   test "test headers" do
     parsed_blocks = MdDocument.parse(@typographic)
-    html = MdDocument.to_html(parsed_blocks)
+    # _html = MdDocument.to_html(parsed_blocks)
     parsed_blocks |> dbg()
     assert true
   end

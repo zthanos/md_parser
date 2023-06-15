@@ -1,10 +1,15 @@
 defmodule MdDocument do
   def parse(text) do
     lines = String.split(text, "\n")
-    BlockTokenizer.parse_block(lines)
+    BlockTokenizer.parse_block(lines, [])
     # parse_blocks(lines, [])
   end
 
+  def tokenize(text) do
+    lines = String.split(text, "\n")
+    blocks = BlockTokenizer.tokenize_lines(lines, BlockTokenizer.block_tokenization_rules(), [])
+    blocks
+  end
   # def parse_blocks([], acc) do
   #   Enum.reverse(acc)
   # end
