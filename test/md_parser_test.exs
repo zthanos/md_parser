@@ -15,6 +15,7 @@ defmodule MdParserTest do
 ## Emphasis
 
 **This is bold text**
+ and this should be int the same block
 
 __This is bold text__
 
@@ -36,7 +37,7 @@ this is the normal text section
   # end
 
   test "test headers" do
-    parsed_blocks = MdDocument.parse(@typographic)
+    parsed_blocks = MdDocument.tokenize(@typographic)
     # _html = MdDocument.to_html(parsed_blocks)
     parsed_blocks |> dbg()
     assert true
