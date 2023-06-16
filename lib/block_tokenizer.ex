@@ -4,101 +4,49 @@ defmodule BlockTokenizer do
   end
 
   def parse_block(lines, block_rules, acc) do
-    tokens = apply_tokenization_rules(lines, block_rules)
-    {:document, acc ++ [tokens]}
+    block_tokens = apply_tokenization_rules(lines, block_rules)
+    {:document, acc ++ [block_tokens]}
   end
 
   def tokenize_lines([], _block_rules, acc) do
     Enum.reverse(acc)
   end
 
-
-  defp apply_tokenization_rules(line, [regex | rest]) do
-    res = Regex.run(regex.rule, line)
-    case Regex.run(regex.rule, line) do
-      ["## "] -> [Atom.to_string(regex.name) | parse_block1(regex.name, line)]
-      [_token | [_, val, _]] ->
-       %{block: Atom.to_string(regex.attr),  content: apply_tokenization_rules(val, rest)}
-
-      _ ->
-        apply_tokenization_rules(line, rest)
-    end
-  end
-
   def tokenize_lines([line | rest], block_rules, acc) do
-    block = apply_tokenization_rules(line, block_rules)
-    block |> dbg()
-    case Enum.find_value(block_rules, fn rule -> rule(line, rule) end) do
-      {:ok, :new_block, rule} ->
-        tokenize_lines(rest, block_rules, [line | acc])
-
-      :continue ->
+    cond do
+      String.starts_with?(line, "\r") ->
         tokenize_lines(rest, block_rules, acc)
 
-      _ ->
-        {block, line, _rule} = LineTokenizer.parse_line(line)
-        tokenize_lines(rest, block_rules, [{block, line} | acc])
+      String.length(String.trim(line)) == 0 ->
+        tokenize_lines(rest, block_rules, acc)
+
+      true ->
+        block = apply_tokenization_rules(line, block_rules)
+        tokenize_lines(rest, block_rules, [{block, rest} | acc])
     end
   end
 
-    defp rule(line, rule) do
-      cond do
-        rule.name == :header_block -> {:ok, :new_block, rule}
-        String.starts_with?("/r", line) -> :continue
-        # !String.starts_with?(" ", line) -> {:ok, :new_block, rule}
-        true -> {:ok, :existing_block, rule}
-      end
-  end
+  defp apply_tokenization_rules(line, [rule | rest]) do
+    line |> dbg()
+    Regex.run(rule.rule, line) |> dbg()
 
-  defp apply_tokenization_rules(line, rule) do
     if Regex.run(rule.rule, line) do
-          parse_block1(rule.name, line)
-      #     {:ok, {rule.name, content}}
+      parse_block1(rule.name, line)
     else
-    line
+      apply_tokenization_rules(line, rest)
     end
-    # Implement your tokenization rules here
-    # and return the tokenized result
   end
 
-
-
-
-  defp apply_tokenization_rules(line, []) do
-    [line]
-  end
-
-    defp parse_block1(:header_block, line) do
-    # Logic to parse header and extract level and content
+  defp parse_block1(:header_block, line) do
     line |> dbg()
     stripped = String.trim_leading(line, "#")
 
     level = String.length(line) - String.length(stripped)
     [{:header, level, stripped}]
   end
+
+  defp parse_block1(:paragraph_block, line) do
+    line |> dbg()
+    [{:paragraph_block, line}]
+  end
 end
-
-
-
-
-    # def tokenize_lines([line | rest], block_rules, acc) do
-  #   case Enum.find_value(block_rules, fn rule -> rule(rule, line) end) do
-  #     {:ok, block} ->
-  #       tokenize_lines(rest, block_rules, [block | acc])
-
-  #     :continue ->
-  #       tokenize_lines(rest, block_rules, acc)
-
-  #     _ ->
-  #       {block, line} = LineTokenizer.parse_line(line)
-  #       tokenize_lines(rest, block_rules, [{block, line} | acc])
-  #   end
-  # end
-
-  # defp rule(rule, line) do
-  #   if Regex.run(rule.rule, line) do
-  #     content = parse_block1(rule.name, line)
-  #     {:ok, {rule.name, content}}
-  #   end
-
-  # end
