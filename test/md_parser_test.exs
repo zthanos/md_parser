@@ -36,13 +36,30 @@ this is the normal text section
   #   assert true
   # end
 
-  test "test headers" do
-    parsed_blocks = MdDocument.tokenize(@typographic)
+  # test "test headers" do
+  #   parsed_blocks = MdDocument.tokenize(@typographic)
+  #   # _html = MdDocument.to_html(parsed_blocks)
+  #   parsed_blocks |> dbg()
+  #   assert true
+  # end
+
+
+  test "simple test with  header and paragraph" do
+    text = """
+    ## This is the header
+
+    and here is the first paragraph from the test
+    with soft return
+
+    and there is the secondp paragraph block
+    containing lorem ipsum
+    """
+
+    parsed_blocks = MdDocument.tokenize(text)
     # _html = MdDocument.to_html(parsed_blocks)
     parsed_blocks |> dbg()
     assert true
   end
-
   test "greets the world" do
     assert MdParser.hello() == :world
   end

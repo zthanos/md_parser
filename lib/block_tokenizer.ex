@@ -13,8 +13,21 @@ defmodule BlockTokenizer do
   end
 
 
+  defp apply_tokenization_rules(line, [regex | rest]) do
+    res = Regex.run(regex.rule, line)
+    case Regex.run(regex.rule, line) do
+      ["## "] -> [Atom.to_string(regex.name) | parse_block1(regex.name, line)]
+      [_token | [_, val, _]] ->
+       %{block: Atom.to_string(regex.attr),  content: apply_tokenization_rules(val, rest)}
+
+      _ ->
+        apply_tokenization_rules(line, rest)
+    end
+  end
 
   def tokenize_lines([line | rest], block_rules, acc) do
+    block = apply_tokenization_rules(line, block_rules)
+    block |> dbg()
     case Enum.find_value(block_rules, fn rule -> rule(line, rule) end) do
       {:ok, :new_block, rule} ->
         tokenize_lines(rest, block_rules, [line | acc])
@@ -30,8 +43,9 @@ defmodule BlockTokenizer do
 
     defp rule(line, rule) do
       cond do
+        rule.name == :header_block -> {:ok, :new_block, rule}
         String.starts_with?("/r", line) -> :continue
-        String.starts_with?(" ", line) -> {:ok, :new_block, rule}
+        # !String.starts_with?(" ", line) -> {:ok, :new_block, rule}
         true -> {:ok, :existing_block, rule}
       end
   end
