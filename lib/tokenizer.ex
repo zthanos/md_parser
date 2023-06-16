@@ -3,7 +3,7 @@ defmodule MdDocument do
 
   def tokenize(text) do
     lines = String.split(text, "\n")
-    blocks = BlockTokenizer.tokenize_lines(lines, BlockTokenizationRules.tokenization_rules(), [])
+    blocks = BlockTokenizer.tokenize_blocks(lines, BlockTokenizationRules.tokenization_rules(), [])
     blocks
   end
   # def parse_blocks([], acc) do

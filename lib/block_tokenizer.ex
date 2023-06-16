@@ -3,9 +3,9 @@ defmodule BlockTokenizer do
     Enum.reverse(acc)
   end
 
-  def parse_block(lines, block_rules, acc) do
-    block_tokens = apply_tokenization_rules(lines, block_rules)
-    {:document, acc ++ [block_tokens]}
+  def tokenize_blocks(lines, block_rules, acc) do
+    block_tokens = tokenize_lines(lines, block_rules, [])
+    {:document, acc ++ block_tokens}
   end
 
   def tokenize_lines([], _block_rules, acc) do
@@ -22,31 +22,32 @@ defmodule BlockTokenizer do
 
       true ->
         block = apply_tokenization_rules(line, block_rules)
-        tokenize_lines(rest, block_rules, [{block, rest} | acc])
+        tokenize_lines(rest, block_rules, [block | acc])
     end
   end
 
   defp apply_tokenization_rules(line, [rule | rest]) do
-    line |> dbg()
-    Regex.run(rule.rule, line) |> dbg()
-
     if Regex.run(rule.rule, line) do
-      parse_block1(rule.name, line)
+      parse_block(rule.name, line)
     else
       apply_tokenization_rules(line, rest)
     end
   end
 
-  defp parse_block1(:header_block, line) do
-    line |> dbg()
+  defp parse_block(:header_block, line) do
     stripped = String.trim_leading(line, "#")
 
     level = String.length(line) - String.length(stripped)
-    [{:header, level, stripped}]
+    {:header, level, stripped}
   end
 
-  defp parse_block1(:paragraph_block, line) do
-    line |> dbg()
-    [{:paragraph_block, line}]
+  defp parse_block(:paragraph_block, line) do
+
+    {:paragraph_block, LineTokenizer.parse_line(line)}
   end
+
+  defp parse_block(:horizontal_ruler_block, _line) do
+    {:horizontal_ruler_block, ""}
+  end
+
 end
