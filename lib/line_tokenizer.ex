@@ -1,37 +1,54 @@
 defmodule LineTokenizer do
-
   def parse_line(line) do
-    tokens = apply_tokenization_rules(line, tokenization_rules())
+    tokens = apply_tokenization_rules(line, tokenization_rules(), [])
     tokens
   end
 
-
-  defp apply_tokenization_rules(line, []) do
+  defp apply_tokenization_rules(line, [], []) do
     [%{attribute: :normal, value: line}]
   end
 
-  defp apply_tokenization_rules(line, [regex | rest]) do
-    case Regex.run(regex.rule, line) do
-      [_token | [_, val, _]] ->
-        %{attribute: Atom.to_string(regex.attr), value: apply_tokenization_rules(val, rest)}
+  defp apply_tokenization_rules(line, [regex | rest], acc) do
+    case Regex.run(regex.pattern, line) do
+      [token | [_, val, _]] ->
+        remaining = String.trim_leading(line, token) |> String.trim_leading()
+        new_acc = acc ++ [%{attribute: Atom.to_string(regex.rule), value: val}]
+        apply_tokenization_rules(remaining, tokenization_rules(), new_acc)
+
+      [val | _rest] ->
+        remaining = String.trim_leading(line, val) |> String.trim_leading()
+
+        new_acc = acc ++ [%{attribute: Atom.to_string(regex.rule), value: val}]
+        apply_tokenization_rules(remaining, tokenization_rules(), new_acc)
+
       _ ->
-        apply_tokenization_rules(line, rest)
+        if String.length(line) > 0 do
+          apply_tokenization_rules(line, rest, acc)
+        else
+          acc
+        end
+
+
     end
   end
 
-
-
   defp tokenization_rules do
     [
-      %{rule: ~r/(\*{2})(.*?)(\1)/, attr: :normal},       # Bold
-      %{rule: ~r/(\*{2})(.*?)(\1)/, attr: :bold},       # Bold
-      %{rule: ~r/(_{2})(.*?)(\1)/, attr: :Bold},        # Bold
-      %{rule: ~r/(_{1})(.*?)(\1)/, attr: :Bold},        # Italic
-      %{rule: ~r/(\*{1})(.*?)(\1)/, attr: :italic},     # Italic
-      %{rule: ~r/(~~)(.*?)(\1)/, attr: :strikethrough}, # Strikethrough
+
+      # Bold
+      %{pattern: ~r/^(\*{2})(.*?)(\1)/, rule: :bold},
+      # Bold
+      %{pattern: ~r/^(_{2})(.*?)(\1)/, rule: :bold},
+      # Italic
+      %{pattern: ~r/^(_{1})(.*?)(\1)/, rule: :italic},
+      # Italic
+      %{pattern: ~r/^(\*{1})(.*?)(\1)/, rule: :italic},
+      # Strikethrough
+      %{pattern: ~r/^(~~)(.*?)(\1)/, rule: :strikethrough},
+      # Normal text
+      %{pattern: ~r/([^*_~]+|(?<=\s)[*_~](?=\S))/, rule: :normal}
+
       # Add more regex patterns for additional tokenization rules
     ]
   end
-
-
 end

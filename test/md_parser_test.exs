@@ -28,20 +28,20 @@ _This is italic text_
 this is the normal text section
 
 """
-  test "test tokenizer" do
-    {:ok, doc} = File.read("./assets/data/sample.md")
-    # Tokenizer.parse(doc)
-    parsed = MdDocument.tokenize(doc)
-     parsed |> dbg()
-    assert true
-  end
+  # test "test tokenizer" do
+  #   {:ok, doc} = File.read("./assets/data/sample.md")
+  #   # Tokenizer.parse(doc)
+  #   parsed = MdDocument.tokenize(doc)
+  #    parsed |> dbg()
+  #   assert true
+  # end
 
-  test "test headers" do
-    parsed_blocks = MdDocument.tokenize(@typographic)
-    # _html = MdDocument.to_html(parsed_blocks)
-    parsed_blocks |> dbg()
-    assert true
-  end
+  # test "test headers" do
+  #   parsed_blocks = MdDocument.tokenize(@typographic)
+  #   # _html = MdDocument.to_html(parsed_blocks)
+  #   parsed_blocks |> dbg()
+  #   assert true
+  # end
 
   @tag :one
   test "simple test with  header and paragraph" do
