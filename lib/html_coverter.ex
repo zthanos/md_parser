@@ -10,9 +10,10 @@ defmodule HtmlCoverter do
 
   defp process(%BlockTokenizer.Block{block_type: :paragraph_block} = block) do
     text =
-      Enum.reduce(block.content, "", fn x, acc ->
+      Enum.reduce(List.first(block.content).elements, "", fn x, acc ->
         case x.attribute do
           :bold -> acc <> "<strong>#{x.value}</strong>"
+          :italic -> acc <> "<i>#{x.value}</i>"
           _ -> acc <> x.value
         end
       end)
@@ -21,19 +22,18 @@ defmodule HtmlCoverter do
   end
 
   defp process(%BlockTokenizer.Block{block_type: :unordered_list_block} = block) do
-    text =
-      Enum.reduce(block.content, "", fn x, acc ->
-        case x do
-          [sub_item | _] ->
-            acc <> "<li>#{sub_item}</li>"
-          _ ->
-            acc <> "<li>#{format_content(x)}</li>"
-        end
+    rows =
+      Enum.reduce(block.content, "", fn r, acc ->
+        value =
+          Enum.reduce(r, "", fn x, acc ->
+            acc <> format_line(x.attribute, x.value)
+          end)
+
+        acc <> "<li>\n#{value}\n</li>"
       end)
 
-    "<ul>\n#{text}\n</ul>"
+    "<ul>\n#{rows}\n</ul>"
   end
-
 
   defp process(%BlockTokenizer.Block{block_type: :header} = block) do
     "<h#{block.level}>#{block.content}</h#{block.level}>"
@@ -43,14 +43,12 @@ defmodule HtmlCoverter do
     "    "
   end
 
-  defp format_content(text) do
-    text |> dbg()
-    text
-    # Enum.reduce(text, "", fn x, acc ->
-    #   case x.attribute do
-    #     :bold -> acc <> "<strong>#{x.value}</strong>"
-    #     _ -> acc <> x.value
-    #   end
-    # end)
+  defp format_line(attribute, value) do
+    case attribute do
+      :bold -> "<strong>#{value}</strong>"
+      :italic -> "<em>#{value}</em>"
+      :strikethrough -> "<s>#{value}</s>"
+      _ -> value
+    end
   end
 end

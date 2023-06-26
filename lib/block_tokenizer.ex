@@ -18,57 +18,56 @@ defmodule BlockTokenizer do
     previous_section = List.first(acc)
 
     section =
-      case block.block_type do
-        :header ->
-          [block | acc]
-
-        :horizontal_ruler_block ->
-          [block | acc]
-
-        :blockquote_block ->
-          cond do
-            previous_section && previous_section.block_type == :blockquote_block ->
-              updated_previous_section = add_block_to_level(previous_section, block)
-              [updated_previous_section | List.delete_at(acc, 0)]
-
-            true ->
-              [block | acc]
-          end
-
-        :unordered_list_block ->
-          cond do
-            previous_section && previous_section.block_type == :unordered_list_block ->
-              #  tokenized_content = LineTokenizer.parse_line(List.first(block.content))
-               updated_previous_section = add_block_to_level(previous_section, block.content)
-               List.replace_at(acc, 0, updated_previous_section)
-
-            true ->
-              [block | acc]
-
-          end
-
-        :ordered_list_block ->
-          [block | acc]
-
-        :paragraph_block ->
-          if previous_section && previous_section.block_type == :paragraph_block do
-            updated_previous_section = BlockTokenizer.Block.append_content(previous_section, List.first(block.content))
-              Map.put(previous_section, :content, updated_previous_section)
-
-
-            [updated_previous_section | List.delete_at(acc, 0)]
-          else
-            [block | acc]
-          end
-
-        :empty_line ->
-          [block | acc]
-
-        not_matched ->
-          not_matched #|> dbg()
+      case BlockTokenizer.Block.supports_nested?(block) and is_nested_block?(block, previous_section) do
+        false -> [block | acc]
+        true -> update_section(block, previous_section, acc)
       end
 
     tokenize_lines(rest, block_rules, section)
+  end
+
+  defp is_nested_block?(_block, nil), do: false
+
+  defp is_nested_block?(block, previous_block) do
+    block.block_type == previous_block.block_type
+  end
+
+  defp update_section(block, previous_block, section) do
+      case block.block_type do
+        :blockquote_block ->
+
+
+              updated_previous_section = add_block_to_level(previous_block, block)
+              updated_previous_section
+
+        :unordered_list_block ->
+            if block.level == previous_block.level do
+              updated_previous_section =
+                BlockTokenizer.Block.append_content1(previous_block, List.first(block.content))
+
+              list = List.replace_at(section, 0, updated_previous_section)
+              list
+
+            else
+              section ++ block
+            end
+
+
+        :ordered_list_block ->
+          [block]
+
+        :paragraph_block ->
+          if previous_block.block_type == :paragraph_block do
+            updated_previous_section =
+              BlockTokenizer.Block.append_content(previous_block, List.first(block.content))
+
+            Map.put(previous_block, :content, updated_previous_section)
+
+            # [updated_previous_section | List.delete_at(acc, 0)]
+          else
+            [block]
+          end
+      end
   end
 
   def add_block_to_level(section, block) do
@@ -76,13 +75,16 @@ defmodule BlockTokenizer do
     Map.put(section, :content, updated_content)
   end
 
-
   defp identify_block(line, block_rules) do
     cond do
       String.starts_with?(line, "\r") -> BlockTokenizer.Block.create(:empty_line, 1, "")
       String.length(String.trim(line)) == 0 -> BlockTokenizer.Block.create(:empty_line, 1, "")
       true -> apply_tokenization_rules(line, block_rules)
     end
+  end
+
+  defp apply_tokenization_rules(line, []) do
+    BlockTokenizer.Block.create(:unknown, 1, line)
   end
 
   defp apply_tokenization_rules(line, [rule | rest]) do
@@ -102,11 +104,9 @@ defmodule BlockTokenizer do
   end
 
   defp parse_block(:paragraph_block, line) do
-    # line |> dbg()
-    # {:paragraph_block, line}
-    BlockTokenizer.Block.create(:paragraph_block, 1, LineTokenizer.parse_line(line))
-
-    # {:paragraph_block, LineTokenizer.parse_line(line)}
+    tokenized = LineTokenizer.parse_line(line)
+    # BlockTokenizer.Block.create(:paragraph_block, 1, tokenized)
+    BlockTokenizer.Block.create(:paragraph_block, 1, tokenized)
   end
 
   defp parse_block(:horizontal_ruler_block, _line) do
@@ -135,10 +135,12 @@ defmodule BlockTokenizer do
           |> String.trim_leading()
           |> String.slice(1, String.length(line))
           |> String.trim()
+        tokenized_line = LineTokenizer.parse_line(content)
 
-
-
-        BlockTokenizer.Block.create(:unordered_list_block, level, content)
+        # tokenized = List.first(LineTokenizer.parse_line(content))
+        # tokenized = LineTokenizer.parse_line(content)
+        # BlockTokenizer.Block.create_ordered(:unordered_list_block, level, tokenized)
+         BlockTokenizer.Block.create(:unordered_list_block, level, tokenized_line.elements)
 
       false ->
         # {:unordered_list_block, 1, line}
@@ -169,30 +171,5 @@ defmodule BlockTokenizer do
         {nested_content, nested_level} = parse_nested_blockquotes(List.first(rest), level + 1)
         {nested_content, nested_level}
     end
-  end
-end
-
-defmodule BlockTokenizer.Block do
-  defstruct [:block_type, :level, :content]
-
-  use ExConstructor
-
-  def header(level, content) do
-    %__MODULE__{block_type: :header, level: level, content: content}
-  end
-
-  def create(block_type, level, content) do
-    %__MODULE__{block_type: block_type, level: level, content: [content]}
-  end
-
-  def create_ordered(block_type, level, content) do
-    %__MODULE__{block_type: block_type, level: level, content: content}
-  end
-
-  def append_content(block, content) do
-    %__MODULE__{
-      block
-      | content: content <> content
-    }
   end
 end
